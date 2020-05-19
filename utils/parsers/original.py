@@ -136,21 +136,22 @@ def retreive_screen_shape(orig_image):
             print('exiting')
             sys.exit(0)
 
-    top_left = (three_corners[0][0], three_corners[1][1])
-    bottom_right = three_corners[2]
+    top_left     = np.array([three_corners[0][0], three_corners[1][1]])
+    bottom_right = np.array(three_corners[2])
 
     scale_height = int( (bottom_right[1] - top_left[1]) / SCALE )
     scale_width  = int( (bottom_right[0] - top_left[0]) / SCALE )
 
-    # If we scale down the position of the bottom-right screen point and then add
+    # If we scale down the position of the centre of the screen and then add
     # that to the top-left point of zoom_points (on the original image), we get
-    # the position of the bottom-right point in the original image.
-    bottom_right = (np.array(bottom_right) / SCALE).astype(np.int16) + np.array(zoom_points[0])
+    # the position of the centre point in the original image.
+    scaled_centre = (top_left + bottom_right)/2
+    centre = (scaled_centre/SCALE).astype(np.uint16) + np.array(zoom_points[0])
 
     # close all open windows
     cv2.destroyAllWindows()
 
-    return bottom_right, scale_height, scale_width
+    return centre, scale_height, scale_width
 
 def get_weight(orig_image):
     weight = ''
@@ -194,7 +195,7 @@ except OSError as e:
     if e.errno != errno.ENOENT:
         raise
     df = pd.DataFrame(
-        columns=['filename', 'weight', 'br_x', 'br_y', 'width', 'height'])
+        columns=['filename', 'weight', 'x', 'y', 'width', 'height'])
 
 # look in original/ to figure out the next available image ID
 try:
@@ -225,7 +226,7 @@ for fname in os.listdir(raw_dir):
     cv2.destroyAllWindows()
 
     # Manually determine the location of the scale screen
-    bottom_right, height, width = retreive_screen_shape(r_img)
+    centre, height, width = retreive_screen_shape(r_img)
 
     # Save the smaller image in the new directory to indicate that it has been
     # parsed
@@ -238,14 +239,14 @@ for fname in os.listdir(raw_dir):
         if e.errno != errno.ENOENT:
             raise
 
-    # Add to dataframe with 'filename', 'br_x, 'br_y', 'width', 'height' and
-    # write to "original_meta" dataframe in main data directory for reference
+    # Add to dataframe with 'filename', 'x, 'y', 'width', 'height' and write to
+    # "original_meta" dataframe in main data directory for reference
     df = df.append(
         pd.DataFrame({
                 'filename': [filename],
                 'weight': [weight],
-                'br_x': [bottom_right[0]],
-                'br_y': [bottom_right[1]],
+                'x': [centre[0]],
+                'y': [centre[1]],
                 'width': [width],
                 'height': [height],
             }),
